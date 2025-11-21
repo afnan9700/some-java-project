@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: collab-editor-proto
+  datasource:
+    url: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?user=postgres.ncsdegcxcjwpoqxeknxg
+    username: postgres
+    password: ${SUPABASE_POSTGRES_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
