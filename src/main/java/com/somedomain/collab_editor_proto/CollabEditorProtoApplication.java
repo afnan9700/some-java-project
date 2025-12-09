@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ProtoCollabEditorApplication {
+public class CollabEditorProtoApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ProtoCollabEditorApplication.class, args);
+		SpringApplication.run(CollabEditorProtoApplication.class, args);
 	}
 
 }

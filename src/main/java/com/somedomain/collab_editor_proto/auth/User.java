@@ -2,14 +2,19 @@ package com.somedomain.collab_editor_proto.auth;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Collections;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;    // Primary key
+    private Long id;
 
     @Column(unique = true, nullable = false)
     private String username;
@@ -27,9 +32,8 @@ public class User {
         this.createdAt = Instant.now();
     }
 
-    // getters and setters
+    // --- domain getters/setters ---
     public Long getId() { return id; }
-    public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }
     public Instant getCreatedAt() { return createdAt; }
 
@@ -37,4 +41,34 @@ public class User {
     public void setUsername(String username) { this.username = username; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    // --- UserDetails interface methods ---
+
+    @Override
+    public String getUsername() { 
+        return username; 
+    }
+
+    @Override
+    public String getPassword() {
+        return passwordHash;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // no roles/authorities yet
+        return Collections.emptyList();
+    }
+
+    @Override
+    public boolean isAccountNonExpired() { return true; }
+
+    @Override
+    public boolean isAccountNonLocked() { return true; }
+
+    @Override
+    public boolean isCredentialsNonExpired() { return true; }
+
+    @Override
+    public boolean isEnabled() { return true; }
 }

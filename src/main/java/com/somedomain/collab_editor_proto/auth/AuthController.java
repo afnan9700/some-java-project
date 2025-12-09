@@ -8,24 +8,26 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // constructor injection
     public AuthController(AuthService service) {
         this.authService = service;
     }
 
-    // request DTOs
     record SignupRequest(String username, String password) {}
     record LoginRequest(String username, String password) {}
+    record RefreshRequest(String refreshToken) {}
 
     @PostMapping("/signup")
-    public String signup(@RequestBody SignupRequest req) {
-        authService.signup(req.username(), req.password());
-        return "Signup successful";
+    public AuthService.AuthResponse signup(@RequestBody SignupRequest req) {
+        return authService.signup(req.username(), req.password());
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest req) {
-        authService.login(req.username(), req.password());
-        return "Login successful (JWT coming soon)";
+    public AuthService.AuthResponse login(@RequestBody LoginRequest req) {
+        return authService.login(req.username(), req.password());
+    }
+
+    @PostMapping("/refresh")
+    public AuthService.AuthResponse refresh(@RequestBody RefreshRequest req) {
+        return authService.refresh(req.refreshToken());
     }
 }
