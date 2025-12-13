@@ -1,4 +1,4 @@
-package com.somedomain.collab_editor_proto.auth;
+package com.somedomain.collab_editor.auth;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

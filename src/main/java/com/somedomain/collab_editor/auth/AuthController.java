@@ -1,4 +1,4 @@
-package com.somedomain.collab_editor_proto.auth;
+package com.somedomain.collab_editor.auth;
 
 import org.springframework.web.bind.annotation.*;
 

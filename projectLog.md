@@ -1,0 +1,302 @@
+# first java project log
+Before anything, I will first clarify what these ramblings even are. This is an extremely "me-thing", and one I have observed to work really work for me. So I expect no one consider this of any value as I do. Thus, please ignore the fact that I have spent a considerable amount of time typing all of this out instead of actually working on something substantial.
+
+So I heard from somewhere that making collaborative applications can be quite complex, and hence they also serve as a good learning experience. So I thought that I would give it a shot. 
+
+I already had some experience with Java, and I also really wanted to learn spring. Both because job opportunities, and to also just try something fresh. So I decided to go with spring with the hope that I will also gain familiarity with it in the process of making the project. 
+
+I will mention it. This whole application is written by chatgpt. Yeah. Its written by chatgpt, but I understand the working of almost all of it. So... I think its fine? I don't know. I do make sure to read and understand everything before I paste it into my codebase. And tbh, this doesn't really feel that much different than "following a tutorial" on youtube (though ive never really done that, so i could be wrong). But it feels like its working, and I understand everything well enough to identify any problems that might occur (i think), so... Idk. I just wanted to justify using chatgpt a little, that's it. And I think that was enough justification.
+
+My step-0 was to give this prompt to chatgpt. 
+```
+hey I am not very familiar with using spring in java    
+    
+I wanna make this project and gain some familiarity in the process.    
+    
+a simple collaborative document editor    
+- basic auth with username and password. jwts.    
+- a document is just plain text (maybe we can render it as markdown if possible)
+- the main page of the application shows the user's "library". library just contains all the documents the user has created.    
+- users can create documents, delete documents    
+- users can open the document. after opening, they can read the document and make edits. after making edits, the users can "save" the document. and there is an option to "start collaborating"    
+- now I don't know if this is a good way to implement it, but I am imagining something similar to how google meet works. "start collaborating" will create a "room" that other users can join. each document has an owner (the one who created the document). the owner user has rights to allow other users into the room, and kick them out of the room.     
+- maybe "start collaborating" will start a webscoket connection with the server. but how would a server maintain several websocket connections?    
+- once multiple users have been connected to a document, they can start making changes to it. any change made by any user should be visible to other users real-time.     
+- I don't know what exactly will get sent after a user makes an edit to the document. so really need your help here. but i am imagining these patterns:     
+	1. each user has a "local copy" of the document. and when any user makes a change to the document, the "change" is what gets sent to the server, and the server forwards the "change" to all other users in the room so that they can update their local copy. i know that there will be problems with consistency and latancy, but i am not concerned about it that much at the moment. and before any user leaves, the whole document gets saved to the db.    
+	2. whenever a user makes a change, the "change" is what gets sent to the server. the server applies this change to the document in the db, and sends a copy of that document to all users in the room.     
+	3. the "changes" don't get sent after every time the user makes a change. whenever a use starts typing, an "inactivity timer" starts running locally. everytime the user makes a change, the timer gets reset to 0. and there is a certain threshold associated this timer. as long as the timer is below the threshold, the other users only see a typing status indicator (such as "user x is typing"). once the inactivity timer reaches the threshold, all the changes which the user made with in that time interval get sent to the server. and the server may distribute those changed in either of the previously mentioned ways. I feel that this could be more efficient than sendig each and every character entered and deleted. but idk.  
+  
+I know that my designs may have major flaws. so I need your help. please suggest what you think would be a good way to build it. also mention your reasoning  
+    
+i know that a collaborative editor is a rabbit hole about crdts and ots and what not. but this is only a toy project and i am not really concerned about consistency and throughput and scalability and all that.    
+    
+can we make this? i have worked with js, but dont know much about spring. and i have heard that its often used in microservices. do you think if implementing some microservice-like architecture here could be possible? i would like to also gain familiarity with caching and message brokers (if and only if they are relevant to this project). for the database, we could use postgres (along with maybe "supabase"?). and for the frontend, we could use react. and react is the only one I am familiar with.
+```
+
+---
+## chapter 1
+(25-11-14)
+
+I started by setting up the project by using the [spring intializr](https://start.spring.io/) and added all the dependencies chatgpt told me to include. I think this is analogous to doing `npm init` in node.js. And the build tool I decided to go with is Maven (the other option is called Gradle). The reason I went with Maven is again the same, chatgpt told me to. This is only the preliminary stuff, so I am not being too persistent about the reasoning for my choices.
+
+About what Maven is... Think of it as a build tool which also handles the dependency management. All of the dependencies are uploaded to Maven Repository (npm registry would be the analog). Maven downloads any of the dependencies from there and adds them to your project directory. And being a build tool means Maven also handles the job of compressing all your application's compiled `.class` files into a single `.jar` file. And apparently such final products are called "artifacts" in this context. I think there is also something called a "dependency `.jar`" that maven outputs, but idk.
+
+*Ok, the project has been set up. But what the heck are all these files in my folder!?*
+
+We shall start by understanding what each of the files in the folder is for. 
+
+`pom.xml` contains all the information about the project's metadata and the dependencies it has. It is managed by maven. (my guess is that its analogous to `package.json`)
+
+`mvnw` and `mvnw.cmd` are related to maven too. And to be honest, I don't understand their purpose yet. They are called "wrapper scripts" and apparently, they help in running commands like `spring-boot:run` (to run your app) and `package` (to build your app).
+
+So `mvnw` is used to run all the maven commands. But if `mvnw` isn't installed on the system, it wouldn't be included in the systems `PATH`. But the shell you use to execute commands can only recognize the files that are included in the `PATH`. Thus, instead of running the commands using `mvn`, we run them using `./mvnw`. The `./` tells the system to run the `mvnw` file that is in the current directory, rather than searching for it in the `PATH`. So the commands would be run by calling `./mvnw package` and `./mvnw spring-boot:run`. 
+
+The `.mvn` folder is again just some configuration stuff which I don't think is relevant at the moment.
+
+`src/main` contains the main application.
+- `src/main/java` is for all the application's java code.
+- `src/main/resources` is for anything else that is not java code. Not sure what such files would be.
+There is actually a file `application.yaml` that `src/main/resources` contains. But I am not entirely sure about its purpose. It looks like it contains some form of metadata like information about the application. But doesn't `pom.xml` already do that? Maybe `application.yaml` is more relevant to spring boot whereas `pom.xml` is more relevant to maven. Oh and you may also see `application.properties`. It just means that the file uses a different format to store the information, nothing more.
+
+`src/test` is for testing stuff which I don't know much about yet.
+
+`target` folder contains stuff related to what would be outputted after running the command to build the project (by `./mvnw package`). You may run `./mvnw clean` command to reset the `target` folder and delete the previous build. 
+
+Now to the actual code. The `CollabEditorProtoApplication.java` file was generated by the initializr itself. There are mainly two things two understand in this file.
+- `@SpringBootApplication` is a stereotype annotation that is a shortcut for the following three annotations
+	- `@EnableAutoConfiguration`
+	  This line makes spring scan all the dependencies the project has, and identifies what all beans that are required and instantiates them. For example, the `spring-boot-starter-web` dependency uses a `DispatcherServlet` object. So `@EnableAutoConfiguration` makes spring create a `DispatcherServlet` instance and run it on the tomcat servlet container.
+	- `@ComponentScan`
+	  Later when you write more code, you will annotate your classes with various annotations such as `@Service`, `@Component` etc. The instantiation of a class marked with `@ComponentScan` will tell spring to find all classes annotated with `@Service`, `@Component` etc. and mark them as dependencies to be injected.
+	- `@Configuration`
+	  I don't understand this very well myself. Looks like it tells spring that custom `@Bean` classes can be defined here. I don't know what that means. (*it is explained in the chapter 2*)
+- `SpringApplication.run(ProtoCollabEditorApplication.class, args)`
+	`SpringApplication` is a utility class provided by spring boot. The `run()` method does the following things
+	- Creates an `ApplicationContext` for the spring application. Its the IoC container that manages all of the wiring and creation of beans.
+	- Does some more dependency injection stuff and starts listening for requests on a port. Which is the reason it takes the parameter `ProtoCollabEditorApplication.class`.
+
+To summarize, you could say that `CollabEditorProtoApplication.java` does some low-level things that are essential for spring applications to work. Things such as creating the `DispatcherServlet` instance, creating an application context to manage dependencies, scanning for dependencies to be injected across the application, starts listening for requests on a port etc.
+
+---
+## chapter 2
+(25-11-17)
+
+I wanted to start off by adding the auth related functionality first. Most of it is fairly self-explanatory. So I will explain only the parts that aren't obvious.
+
+### `com.somedomain.collab_editor_proto.auth`
+This is the package where we define all the auth related classes and methods. 
+
+#### `User.java`
+The `User` class represents the schema of the table in which all the users are persisted in the db. They are referred to as "Entities" in spring. The `@Table(name="users")` just tells the database the name which should be set to the table. `@GeneratedValue(strategy=GenerationType.IDENTITY)` is similar to setting the `AUTO_INCREMENT` attribute to a column. `@Id` represents the column to be used as the primary key.
+
+The rest of the stuff is self-explanatory. Just understand that all of these annotations which are used here have been defined by the [JPA](data-access-in-spring). [ORMs](object-relational-mapping) such as Hibernate need to have your java code use these annotations so that they can handle the object-relational mapping.
+
+And its the `jakarta.persistence.*` package that contains all of the JPA-related stuff. It used to be a part of `javax.persistence.*` initially, but got changed to `jakarta` due to some reason. 
+
+#### `UserRepository.java`
+This is an important design pattern to understand in spring. `JpaRepository` is an interface defined by spring that contains various helper methods like `save()`, `findById()`, `findAll()`, `delete()`, etc. The values returned by those helper methods are of type `User`, hence you can use the methods defined in the `User` class to get any information about the returned `User` object.
+
+The interface takes two generics as "parameters". The first generic represents the table entity which the repository should manage, and the second one represents the type of the entity's `@Id` column. 
+
+When an interface is created by extending the `JpaRepository` interface, spring handles it's implementation and definition of those helper methods (`findAll()`, `delete()`, etc.). The class also gets marked as bean, so it behaves like a singleton. 
+
+But that is not all, you can even declare some of your own custom helper methods and spring will handle their implementation too. Spring uses reflection to scan the interface you defined and find methods such as `find<ColumnName>By<ColumnName>()`, `exists<ColumnName>By<ColumnName>()`, etc. When the custom methods you mention follow that specific naming convention, spring handles the implementations of those methods on its own.
+
+Here, the custom method we defined was `Optional<User> findByUsername(String username)`. Spring handles the implementation of a method that finds the row in the `User` table whose `username` matches the passed value.
+
+#### `PasswordConfiguration.java`
+`PasswordConfiguration` is a `@Configuration` class. The method `passwordEncoder()` returns an instance of an implementation of the `PasswordEncoder` interface, and spring will register it as a bean. 
+
+But why?
+
+I am not sure yet, but I am assuming that `passwordEncoder()` is going to return an object that offers some form of encryption-related methods. In our code, the returned object is a `BCryptPasswordEncoder` class instance.
+
+From how I understand it, there are two main advantages for this kind of design
+- Since the return type of the method is the general PasswordEncoder, the actual encryption method used is decoupled from the services that make use of that method. Services can just store the instance returned in a `PasswordEncoder` variable without any regard to which actual encryption algorithm is used.
+- The other reason is to decouple the process of object of creation. Which exact object will get created, modified, etc. is all contained within the `passwordEncoder()` method. Services only call the method and make use of the returned result.
+- The above two reasons sound sensible. But still, they don't justify marking the method as a `@Bean`. A factory method with a return type of `PasswordEncoder` would also give the above two benefits. So what's the reason for marking it as a `@Bean`? I am not exactly sure about this either. But my guess would be efficiency. A password encoder is simply not something whose multiple different instances are strictly required. Having a single instance of the object is enough to satisfy all purposes. So maybe, that is why we mark it as a `@Bean`. Beans are singleton by default, hence the same instance is going to be used across the whole spring application. 
+  But I will be honest, that still does not sound like a strong enough reason to me. I could be wrong, but maybe a similar result could be achieved by using `static` or something similar. So... Why a bean? Maybe its a convention thing so that it fits better with the overall application. idk.
+
+#### `AuthService.java`
+There isn't really much to say about this one. `@Service` is just `@Component` but with a different name. It marks the `AuthService` class as a bean.
+
+Spring applications work in different layers: `Client <-> Controller <-> Service <-> Repository <-> Database`.
+Each layer has its own job. This keeps things neat and maintainable.
+- Controller layer handles the process of communicating with the web and nothing else. It extracts data from request body, creates the response body, etc. It transforms the request data into something the service layer can work with.
+- Service layer handles all the business logic. 
+- Repository layer communicates with the database.
+
+#### `AuthController.java`
+`@RestController` is a stereotype annotation that combines two other annotations
+- `@Controller`. Similar to `@Component`, nothing more (i think).
+- `@ResponseBody`. This tells spring to serialize any object returned by a method in the class into a JSON string and add it to the response body.
+
+`@RequestBody` is an annotation used on a variable. It tells spring to fill all fields that variable's class has with the values of the corresponding fields included in the JSON request body. Basically, if the request body has a field `someField` and the class of the variable (annotated with `@RequestBody`) also has `someField`, the variable's `someField` is going to be assigned the value which was in the request body.
+
+There is something worth noting here. Both `@ResponseBody` and `@RequestBody` serialize and deserialize all and only those fields that are included in the request or response objects. So it is a good practice to ensure that these request and response objects contain only the required fields. This is very important for security, as you may otherwise end up sending data that wasn't intended to be sent. For this purpose, something called Data Transfer Objects (DTOs) are used.  A DTO is just an plain placeholder object that contains the only those fields that are required. Instead of sending the actual objects, we fill a DTO with the object's data to be sent, and send the DTO. In our code `SignUpRequest` and `LoginRequest` are the DTOs.
+
+`@RequestMapping("/auth")`. The value of passed parameter is going to be prefixed to any of the routes defined inside this class.
+
+`@PostMapping()` and `GetMapping()` map HTTP requests to routes and the request type. 
+
+---
+## chapter 3
+(25-11-30, 25-12-5, 25-12-6)
+
+We completed setting up the database related stuff. Now we start implementing the actual authorization logic. We are going to be using JWT (obviously), and I thought that I would also implement both access and refresh tokens. We are going to utilize the Spring Security framework to make all of it. Apparently Spring Security works using "Filters". Filters are a servlet-level component, and they intercept a request before it reaches the `DispatcherServlet`. This makes sure that only the authorized requests enter the Spring MVC environment (which is somehow more secure).
+
+### `com.somedomain.collab_editor_proto.auth`
+#### `User.java`
+A table that stores all users who have a registered account is something that almost all applications have. And typically the authentication related attributes of a user, things such as their username, email, password, permissions, authorities etc. are also stored in the same users table. 
+
+As Spring Security can be used for implementing authentication and authorization, it needs a way to access the authentication related information of users. Thus, Spring Security requires our `User` entity class to implement an interface called `UserDetails`. If a class implements the `UserDetails` interface, the class should provide definitions for the methods such as `getUsername()`, `getPassword()`, `getAuthorities()` etc. Also, seems that if any methods specified by the `UserDetails` interface are not relevant to your application, you simply return `true`.
+
+#### `CustomUserDetailsService.java`
+To me, this feels like the user repository analog for Spring Security. I could be wrong.
+
+Similar to how a class that extends `JPARepository` can be used to interact with the `User` entity, a class that implements `UserDetailsService` interface is used by Spring Security (by the filter more specifically) to interact the User table. Since the returned objects are implementations of `UserDetails`, Spring Security knows which methods it can use once it has the `UserDetails` object. Here we defined only one method `loadUserByUsername()`.
+
+#### `JwtService.java`
+This is another service class similar to the previous one. The purpose of service classes is to provide methods that other classes can make use of. Here, the `JwtService` is going to be used by the auth filter class which we will implement later. 
+
+There are mainly 3 types of methods this class provides.
+- Generation methods. Methods that generate a token from a `UserDetails` instance.
+- Extraction methods. Methods that extract some information from a token.
+- Validation methods. Methods that check if a token is valid. 
+
+The service also has 3 attributes that determine how the methods provided by this service will work. Here, I think the values of these are set from the `application.yaml` file.
+
+`generateAccessToken()` and `generateRefreshToken()` are the generator methods. It makes use of the helper method `buildToken()` to work.
+
+Aside from the standard claims of a JWT such as `Subject`, `IssuedAt`, `Expiration` etc., we also define a custom claim for the JWT to differentiate between refresh and access tokens.
+
+The rest of the stuff is fairly self-explanatory in my opinion. Other than perhaps the `extractClaim()`, `extractAllClaims()`, `getSignedKey()` methods, which look a little complex because of my unfamiliarity with all of those methods they use internally. But they are all just helper methods so... Maybe I will look into them later?
+
+Or maybe I will try understanding at least this part of the code...
+```java
+private Claims extractAllClaims(String token) {
+	return Jwts.parserBuilder()
+		.setSigningKey(getSigningKey())
+		.build()
+		.parseClaimsJws(token)   
+		.getBody();
+}
+
+private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+	final Claims claims = extractAllClaims(token);
+	return claimsResolver.apply(claims);
+}
+```
+or... maybe later... (i know that i am being a little irresponsible but its only this part)
+
+#### `JwtAuthFilter.java`
+This is the filter class that intercepts any requests that get made to our application's origin, and verifies if the request contains a valid authorization token. (I still do not know how the filters can be configured to intercept requests made to some specific set of routes)
+
+Apparently, after receiving a request, some filters can end up running multiple times. I am not sure why it happens, but it seems that it could happen when your app redirects the user to a different page. Don't know much about it.
+So to prevent that kind of behavior we make our filter class extend a class called `OncePerRequestFilter`. This will guarantee that the filter wont get executed more than a single time for a request. Why do we want the filter to run only once per request? My guess is simply that checking the authentication status of a user who was already determined to be authenticated does not make much sense. (But yes, I will accept that I don't understand why a filter would get triggered again. Doesn't a filter run only before the request enters the application? Why would it run again? Idk.)
+
+All of the logic the filter should perform is to be written in the `doFilterInternal()` method. It seems that the parent class (`OncePerRequestFilter`) is responsible for calling the `doFilterInternal()` method such that it gets executed only once. So it is marked as `protected` because it makes the method accessible to the only parent class and not other classes (which perfectly fits our requirement). 
+
+The `filterChain` variable that `doFilterInternal()` takes as parameter represents the list of filters which still need to get executed. At the end of the function, the method `filterChain.doFilter(request, response)` is called. And I believe it forwards the request and response objects to the next filter in the list. (sounds very similar to middleware and next() in express). The same method also forwards the request and response objects to the `DispatcherServlet` when all filters have been executed.
+
+The purpose of this class is simple. It verifies whether the JWT present in the request is valid or not. If the JWT is valid, an authentication object for the user is created and stored in the security context. Otherwise nothing happens and later, the request and response objects are forwarded to the next filter.
+
+An authentication object (implementations of an interface `Authentication`) is used by spring security to track the authentication status of a user. An authentication object includes information about the user such as
+- User identity (such as username).
+- Authentication status. Whether or not the user has been authentication. This allows for creation of authentication objects even for unauthenticated users.
+- A list of all authorities the user has. 
+
+The `SecurityContext`, component that stores authentication objects is a `ThreadLocal` storage. What it means is that the data stored in `ThreadLocal` can be accessed from anywhere in the application but other threads cannot access it. The reasoning for this design choice is that in spring, each request is typically handled by one thread of the application. Threads are not concerned with the authentication statuses of users whose requests are being handled by other threads. So, it makes sense to restrict the access to that information only to the current thread. Hence the `ThreadLocal` storage. After the completion of request, spring security automatically clears the security context.
+
+But why even Security context? Why not just embed the authentication information in the request object itself? Like in express. I don't really know myself. Maybe it makes the code neater? One reason could be that this decouples the rest of the application from the servlet layer. The servlet can be said to consist methods and classes handling things such `HttpServletRequest`,  `HttpServletResponse`, `Filter`, `DispatcherServlet` etc. The parts of the application such as controllers, services and repositories don't interact with any of those components. If the authentication information was included in the request object, it would have to be passed between all components of the application which could be messy.
+
+Don't know what `ServletException` is. Seems that its something tomcat might throw.
+
+`UsernamePasswordAuthenticationToken` is the concrete class of the object that gets stored in the security context. It is an implementation of the `Authentication` interface for systems that use username and password for authentication. The token contains information about the user such as their username, authorities they have etc. We also used a class called `WebAuthenticationDetailsSource` here to get some information about the request such the IP address, session ID, etc.
+
+I will mention one thing though. I am skeptical about the database call this line is making
+```java
+UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+```
+I don't understand why chatgpt wanted to verify the token by making a db call. If hashing of the header and payload of the JWT yielded the signature, is that not sufficient to say that the user was authenticated? Making a database call for every single request feels a little expensive. It seems that the reason to check the database is to avoid some very specific cases such as the token remaining valid even after a user has deleted their account or some authorities of the user got revoked or something else. 
+
+So the reason is consistency? Maybe I should consider caching that data in future. That way, only the first request user makes would be slower, and the subsequent ones would be faster (if i was using LRU-like caching. but idk much about caching).
+
+#### `SecurityConfig.java`
+I will be honest, I don't understand this class at all.
+
+The `securityFilterChain()` method configures stuff related to how requests received should be handled. It also allows us to add our custom filters to the spring's filter chain. I have no idea what the `HttpSecurity http` parameter is, but it looks like everything is configured using that object.
+- We disabled csrf because we expect the JWTs to be included in the headers. So the browser is not going to attach any auth related information as cookies, so csrf protection is irrelevant.
+- Normally, the server adds a session id to the responses sent to the user. But REST APIs are stateless, so we don't rely on sessions. Hence information related to session ids is also irrelevant.
+- The next method permits anyone to make requests to routes starting with `/auth/`. We do it because the `/auth/` routes are going to be the login and register ones, and it does not make sense to protect them.
+I observed it and don't know the reason why, but all of the above mentioned "configurations" were implemented as a chain of methods. And another detail is that all of those methods take arrow functions as parameters. Maybe its some pattern I should know.
+
+We also add our `JwtFilter` to the filter chain using the same chain of methods.
+(if i am correct) `UsernamePasswordAuthenticationFilter` is the filter that checks the security context and either allows the request or redirects it to the log in page. We add our `JwtFilter` *before* the `UsernamePasswordAuthenticationFilter` because if `JwtFilter` adds an authentication object to the security context, the `UsernamePasswordAuthenticationFilter` will directly allow the request.
+
+The `userDetailsService()` method is I think just a way to expose our custom user details service such that spring security can use it.
+
+I have no idea about what the purpose of `authenticationManager()` is!
+```java
+@Bean
+public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+	// This automatically uses the UserDetailsService + PasswordEncoder beans
+	return config.getAuthenticationManager();
+}
+```
+
+And that's it?
+
+Yeah I have no idea what's even going on anymore! What was the purpose of this `SecurityConfig` class?? I am unable to reason anything anymore and I have already lost too much time trying to make sense of it! So I am just proceeding as it is! I am sorry! (ive heard that spring security is notorious for being complex so... maybe my frustration could be a little justified here)
+
+#### `AuthService.java`
+Our `login()` and `signup()` methods only interacted with the db and nothing else. So we make them actually return the JWTs to the clients now. And since I said that the application would send both refresh and access tokens, we need an additional method that generates a new access token for the user using a refresh token, so the `refresh()` method.
+
+This class is fairly straightforward if you understand the `JwtService` class, so I am not going into it.
+
+And in the method `refresh()`, we make a database call (even though it feels like it isn't really needed). The reason we do is similar to what I discussed at the end of the `JwtService.java` section. The route `/refresh` comes after `/auth/`, so the filter doesn't intercept those requests. Thus, the database look up thing is handled here explicitly again.
+
+The reason why we use the `AuthResponse` record is similar to what I mentioned in the `AuthController.java` section of "chapter 2". Its a DTO to enforce only the specified information to get sent.
+
+#### `AuthController.java`
+Not much to say here really. 
+
+I will start working on the rest of the application tomorrow now. I was so unprepared for how complex Spring Security was going to be. I watched so many videos but nothing seemed to click. I will give it another try sometime. I didn't know it during the process of me trying learn it, but apparently, Spring Security is actually considered one of the most complex parts of Spring. And here, I started with the expectation that it was going to be something trivial. I mean, I am speaking from experience with node.js. Anyway, I feel relieved to know that me finding it difficult to be justified. I was starting to worry that I could just be too dumb for spring haha. 
+
+## chapter 4
+(25-12-13)
+
+Currently, our application does not explicitly handle any exceptions that get thrown. In plain java, an unhandled exception can cause the whole execution to terminate. Spring doesn't terminate the execution completely. It has an internal exceptions resolver that automatically sends some generic response code (usually a 500 or 404) to resolve the request. But these responses are vague and uninformative, so adding explicit exception handling, especially for the instances where we know that an exception might be thrown will make for a much better API design.
+
+We could add try-catch blocks in each of the service methods and handle the exceptions gracefully. But chatgpt says that it can get messy and there is a better way to do it in spring. 
+
+A method inside a controller marked with `@ExceptionHandler(SomeException.class)` automatically handles any `SomeException` that gets thrown in that controller class. In REST APIs, these methods also handle the job of sending a HTTP response to give the client feedback about the exception. 
+
+`@ExceptionHandler(SomeException.class)`'s scope is limited to only the controller class in which it is defined. To make the exception handling method handle exceptions thrown across any part of the app, it should be declared in a global exception handling class. A global exception handling class is marked with `@ControllerAdvice`. 
+
+Chatgpt suggested that I should also implement "logging" in my application. Logging is about recording various actions that application performs. In a development environment, you might just log to console to track the flow of request in the application. But in production, where your server is processing multiple requests simultaneously, consoling to log falls short as it would be much harder to identify what exactly went wrong in the sea of statements logged by other requests. 
+
+Java has many logging frameworks that can be used to implement it. Logback and Log4J2 are some examples. I am not sure about the specifics of what those frameworks do yet. But different frameworks require the application code to be written in the way specified by the framework. This makes the application tightly coupled with the logging framework it uses. 
+
+So, you guessed it, we use an abstraction.
+
+SLF4J provides methods that your application can use to emit standard log events. SLF4J does not do any logging by itself. It acts as a standard interface that other logging frameworks can use to perform the logging. 
+
+I have not integrated an actual implementation of a logging framework yet. But I am using SLF4J. Chatgpt said that I should also log some non-error events too, especially when its related to auth. I don't know why though. I mean, why is logging important in auth related contexts? Idk. Anyway I added some logs such as `Sign in attempt by x`, `Sign up successful`, etc.
+
+### `com.somedomain.collab_editor_proto.common`
+
+#### `GlobalExceptionHanlder.java`
+Nothing to say really. 
+
+We use the return type `ResponseEntity<ErrorResponseDTO>` because it allows to set the HTTP status code manually.
+
+Those "exception handling methods" expect to receive a parameter (which is the exception object). I am guessing the part of spring internals which calls those methods passes that parameter. 
+
+#### `exceptions`
+We defined all the custom exceptions in here which will be throw by the application's Service classes. 
+
+Tbh I don't really know why I should not just use the generic `AppException` with a custom message and status code everywhere. What's the point of having `NotFoundException`, `UserAlreadyExistsException` when the exact same functionality can be achieved using only the `AppException`? Idk, maybe defining custom exception classes is preferrable when the exception is thrown in several places. 
+
+---

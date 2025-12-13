@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.somedomain</groupId>
-	<artifactId>collab-editor-proto</artifactId>
+	<artifactId>collab-editor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>collab editor proto</name>
+	<name>collab editor</name>
 	<description>basic collaborative editor</description>
 	<url/>
 	<licenses>
@@ -86,6 +86,10 @@
     <artifactId>jjwt-jackson</artifactId>
     <version>0.11.5</version>
     <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-api</artifactId>
 </dependency>
 
 </dependencies>

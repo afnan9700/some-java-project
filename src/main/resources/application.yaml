@@ -1,6 +1,6 @@
 spring:
   application:
-    name: collab-editor-proto
+    name: collab-editor
   datasource:
     url: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?user=postgres.ncsdegcxcjwpoqxeknxg
     username: postgres

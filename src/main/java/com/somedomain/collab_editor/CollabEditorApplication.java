@@ -1,13 +1,13 @@
-package com.somedomain.collab_editor_proto;
+package com.somedomain.collab_editor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CollabEditorProtoApplication {
+public class CollabEditorApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(CollabEditorProtoApplication.class, args);
+		SpringApplication.run(CollabEditorApplication.class, args);
 	}
 
 }
