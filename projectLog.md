@@ -300,3 +300,48 @@ We defined all the custom exceptions in here which will be throw by the applicat
 Tbh I don't really know why I should not just use the generic `AppException` with a custom message and status code everywhere. What's the point of having `NotFoundException`, `UserAlreadyExistsException` when the exact same functionality can be achieved using only the `AppException`? Idk, maybe defining custom exception classes is preferrable when the exception is thrown in several places. 
 
 ---
+
+## chapter 5
+(25-12-14, 25-12-24)
+
+Thought about how I should proceed for a while and very quickly realized that the collaborative part is still a bit overambitious considering the point at which the application currently is. So I decided that I will first make a generic document editor, along with the frontend. Then I will think about the collaborating functionality.
+
+I do want to allow multi-user access to documents though. So it is not going to be as simple.
+
+I am imagining something like this at the moment: Each document will have only one owner. But this owner can give other users access to this document by "sharing" it. The owner has control over which exact permissions those other users have over the document. Users have two sections in their library - Owned documents and Shared documents. Documents that were shared by another user appear in the Shared documents section. 
+
+Since each document can be accessed by multiple users, conflicts can happen. I decided to handle those conflicts by not even allowing them to happen. Meaning, only one user can access a document at once. Other users are excluded from opening the document while the document is already being accessed by some other user. Maybe I can allow reads as it doesn't cause any conflicts.
+
+I am still very confused about how exactly a user will "share" their document. I wanted to use something like "invite links" that many applications use, but their working is also not as simple as I had thought. 
+
+Before proceeding, I will lay out the exact functionalities I want to have once again.
+- Each document has only a single owner. The owner of the document has all permissions over the document.
+- A document can be shared to other users via "invite links". An invite link is associated to a specific document.
+- The invite link does not grant the user access to the document directly. After the user uses the invite link, their invitation enters a pending state. I am calling these pending invitations "requests". A request is uniquely associated to a document and a user (the user requesting the access to a document). Each document can have requests from multiple users at the same time, and each user can also have requests to multiple documents pending at the same time. So each document might have a "Pending User Requests" list, and each user might have a "Pending Document Requests" list.
+- The owner of the document sees the users that are requesting the access and decides to either approve the requests or not. If the request is approved, the user gets granted permissions to the document, and the document appears in that user's "Shared documents" list. If the request is denied, the document doesn't appear in the Shared documents list. In either case, the document gets removed from the "Pending User Requests" list of the document and the "Pending Document Requests" list of the user. 
+- Each document can be accessed by only one user at one time. We could add a column to the document that represents whether any user currently has the document open. The value of the column gets modified at times of opening and closing the document. But there is a very subtle but important problem with this (was pointed out by gpt). I don't know how but, seems that its possible that a user might exit a document without releasing the lock. If that happens, the document would stay locked forever. It can be avoided by simply adding an expiration time for the lock. 
+  But there is still a problem - deciding the expiration time. Ideally, I would want the expiration to be very small - something like a minute. And expiration time keeps updating as long as the user is "active". But how do I even detect if the user has become "inactive"? I don't think I have a way without making way too complex. So I have decided to go with a late expiration time. I think it would be good enough, especially since this is all for a very specific edge case.
+
+I will now explain why we went with the schema we went with.
+
+The following are all the entities that are involved
+- **`Document`**
+  The most basic entity. Here is where all the content the document contains goes. It also has some metadata such as the `ownerId`, `createdAt` etc. The purpose of `@Version` is to avoid lost update problems. As the documents have multi-user access, lost updates can occur. Whenever a user reads or writes a document, it's version is also read. The user makes the write only if the version read during the read operation matches the version read during the write operation. Otherwise, the write is rejected. Version value at read time and version value at write time not matching is an indication that the initially read document is of a stale state than the one being written.
+- **`DocumentPermission`**
+  My initial instinct was to store a list of `(user,permisssion)` values in the Document table itself. But that would violate the first normal form, and would make queries like "find all documents where user x has permission y" slow. So document permissions go in their own table. 
+  There is another important thing to note here. The `role` field can take only one value. This is an intentional design choice because all users who have permissions to edit obviously also have permissions to read. But this choice can become a constraint when a new role is entirely separate and doesn't fit into the "hierarchy". 
+- **`DocumentLock`**
+  This just contains information about the document that is locked, the user who has placed the lock, lock and expiration times. A new row is added once a user starts editing a document, and deleted once the user exits editing the document. If the current time is past the expiration time, the row is deleted. 
+  As each document has only a single lock, this information could have been stored in the Document table itself. And that's what I initially thought too. But chatgpt insisted that we store in a separate table. The reason being separation of concerns. The whole mechanism of locking is something that is much different from what the responsibilities of the Document table are. So it makes sense to separate them to keep things neat. 
+- **`Invite`**
+  The owner generates an invite link for a document and shares it with their friend. When the friend uses the invite link, the backend needs a way verify that the link was actually generated by the backend itself. So, we store invites in the database. If invite link used by the friend is valid, the corresponding invite token exists in the database. 
+- **`AccessRequest`**
+  Similar to DocumentPermission, an AccessRequest row is also uniquely associated to a user and a document. Thus it needs to be stored in a different table. After the invite token has been validated, it becomes an access request and enters the pending state.
+
+Also added the repository interfaces for each but nothing much to say about it. Will proceed with the rest of it later.
+
+---
+## chapter 6
+
+
+---
