@@ -1,62 +1,54 @@
 package com.somedomain.collab_editor.permission;
 
+import com.somedomain.collab_editor.auth.User;
+import com.somedomain.collab_editor.document.Document;
+
+import jakarta.persistence.*;
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-
 @Entity
-@Table(name = "document_permissions",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"document_id", "user_id"}))
+@Table(name = "document_permissions", uniqueConstraints = {
+    @UniqueConstraint(name = "uc_doc_user", columnNames = {"document_id","user_id"})
+})
 public class DocumentPermission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "document_id", nullable = false)
-    private Long documentId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "document_id", nullable = false)
+    private Document document;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PermissionRole role;
+    private PermissionLevel level = PermissionLevel.VIEWER;
 
+    @Column(nullable = false)
     private Instant grantedAt = Instant.now();
 
     public DocumentPermission() {}
 
-    public DocumentPermission(Long documentId, Long userId, PermissionRole role) {
-        this.documentId = documentId;
-        this.userId = userId;
-        this.role = role;
+    public DocumentPermission(Document document, User user, PermissionLevel level) {
+        this.document = document;
+        this.user = user;
+        this.level = level;
         this.grantedAt = Instant.now();
     }
 
     // getters/setters
     public Long getId() { return id; }
-    public Long getDocumentId() { return documentId; }
-    public Long getUserId() { return userId; }
-    public PermissionRole getRole() { return role; }
+    public Document getDocument() { return document; }
+    public User getUser() { return user; }
+    public PermissionLevel getLevel() { return level; }
     public Instant getGrantedAt() { return grantedAt; }
 
-    public void setId(Long id) { this.id = id; }
-    public void setDocumentId(Long documentId) { this.documentId = documentId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-    public void setRole(PermissionRole role) { this.role = role; }
+    public void setDocument(Document document) { this.document = document; }
+    public void setUser(User user) { this.user = user; }
+    public void setLevel(PermissionLevel level) { this.level = level; }
     public void setGrantedAt(Instant grantedAt) { this.grantedAt = grantedAt; }
-
-    public enum PermissionRole {
-        VIEWER,
-        EDITOR
-    }
 }

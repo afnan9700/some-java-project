@@ -1,65 +1,71 @@
 package com.somedomain.collab_editor.invite;
 
-import java.time.Instant;
-import java.util.UUID;
+import com.somedomain.collab_editor.document.Document;
+import com.somedomain.collab_editor.auth.User;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.*;
+import java.time.Instant;
 
 @Entity
-@Table(name = "invites", indexes = @Index(columnList = "token"))    // for quick lookup by token
+@Table(name = "invites", indexes = {
+    @Index(columnList = "token", name = "idx_invite_token")
+})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Invite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // the doc this invite is for
-    @Column(nullable = false)
-    private Long documentId;
-
-    @Column(nullable = false)
-    private Long ownerId; // convenience: who created the invite (should equal document.ownerId)
-
+    // invite token (unique)
     @Column(nullable = false, unique = true)
-    private String token; // random token used in invite link
+    private String token;
 
-    private boolean autoApprove = false; // if true, redeeming the invite grants permission immediately
+    // which document this invite is for
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "document_id", nullable = false)
+    private Document document;
 
-    private Instant expiresAt; // optional expiry
+    // Creator of the invite (usually the owner)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 
+    @Column(nullable = false)
     private Instant createdAt = Instant.now();
+
+    // expiry instant
+    private Instant expiresAt = Instant.now().plusSeconds(3 * 3600); // default 3 hours
+
+    // If true, validating the invite auto-approves access (skips access request creation)
+    private boolean autoApprove = false;
 
     public Invite() {}
 
-    public Invite(Long documentId, Long ownerId, boolean autoApprove, Instant expiresAt) {
-        this.documentId = documentId;
-        this.ownerId = ownerId;
-        this.token = UUID.randomUUID().toString();
-        this.autoApprove = autoApprove;
+    public Invite(String token, Document document, User createdBy, Instant expiresAt, boolean autoApprove) {
+        this.token = token;
+        this.document = document;
+        this.createdBy = createdBy;
         this.expiresAt = expiresAt;
+        this.autoApprove = autoApprove;
         this.createdAt = Instant.now();
     }
 
-    // getters/setters
+    // getters / setters
     public Long getId() { return id; }
-    public Long getDocumentId() { return documentId; }
-    public Long getOwnerId() { return ownerId; }
     public String getToken() { return token; }
-    public boolean isAutoApprove() { return autoApprove; }
-    public Instant getExpiresAt() { return expiresAt; }
+    public Document getDocument() { return document; }
+    public User getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getExpiresAt() { return expiresAt; }
+    public boolean isAutoApprove() { return autoApprove; }
 
     public void setId(Long id) { this.id = id; }
-    public void setDocumentId(Long documentId) { this.documentId = documentId; }
-    public void setOwnerId(Long ownerId) { this.ownerId = ownerId; }
     public void setToken(String token) { this.token = token; }
-    public void setAutoApprove(boolean autoApprove) { this.autoApprove = autoApprove; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+    public void setDocument(Document document) { this.document = document; }
+    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+    public void setAutoApprove(boolean autoApprove) { this.autoApprove = autoApprove; }
 }

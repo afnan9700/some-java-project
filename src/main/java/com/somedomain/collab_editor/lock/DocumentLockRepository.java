@@ -4,6 +4,9 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface DocumentLockRepository extends JpaRepository<DocumentLock, Long> {
-    Optional<DocumentLock> findByDocumentId(Long documentId);
+import com.somedomain.collab_editor.document.Document;
+
+public interface DocumentLockRepository extends JpaRepository<DocumentLock, Document> {
+    Optional<DocumentLock> findByDocument(Document document);
+    void deleteByDocument(Document document);
 }

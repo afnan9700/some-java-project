@@ -1,44 +1,48 @@
 package com.somedomain.collab_editor.lock;
 
+import com.somedomain.collab_editor.document.Document;
+import com.somedomain.collab_editor.auth.User;
+
 import java.time.Instant;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "document_locks")
 public class DocumentLock {
 
     @Id
-    @Column(name = "document_id")
-    private Long documentId; // use document id as PK so there's only one lock row per document
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "document_id", nullable = false)
+    private Document document;
 
-    @Column(name = "locked_by_user_id", nullable = false)
-    private Long lockedByUserId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User lockedByUser;
 
+    @Column(nullable = false)
     private Instant lockedAt = Instant.now();
 
+    @Column(nullable = true)
     private Instant expiresAt;
 
     public DocumentLock() {}
 
-    public DocumentLock(Long documentId, Long lockedByUserId, Instant expiresAt) {
-        this.documentId = documentId;
-        this.lockedByUserId = lockedByUserId;
+    public DocumentLock(Document document, User lockedByUser, Instant expiresAt) {
+        this.document = document;
+        this.lockedByUser = lockedByUser;
         this.lockedAt = Instant.now();
         this.expiresAt = expiresAt;
     }
 
     // getters/setters
-    public Long getDocumentId() { return documentId; }
-    public Long getLockedByUserId() { return lockedByUserId; }
+    public Document getDocument() { return document; }
+    public User getLockedByUser() { return lockedByUser; }
     public Instant getLockedAt() { return lockedAt; }
     public Instant getExpiresAt() { return expiresAt; }
 
-    public void setDocumentId(Long documentId) { this.documentId = documentId; }
-    public void setLockedByUserId(Long lockedByUserId) { this.lockedByUserId = lockedByUserId; }
+    public void setDocument(Document document) { this.document = document; }
+    public void setLockedByUser(User lockedByUser) { this.lockedByUser = lockedByUser; }
     public void setLockedAt(Instant lockedAt) { this.lockedAt = lockedAt; }
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 }

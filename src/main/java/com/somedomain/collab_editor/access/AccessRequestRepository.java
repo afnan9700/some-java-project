@@ -5,9 +5,13 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.somedomain.collab_editor.auth.User;
+import com.somedomain.collab_editor.document.Document;
+
 public interface AccessRequestRepository extends JpaRepository<AccessRequest, Long> {
-    List<AccessRequest> findByInviteIdAndStatus(Long inviteId, AccessRequest.RequestStatus status);
-    List<AccessRequest> findByRequesterId(Long requesterId);
-    Optional<AccessRequest> findByInviteIdAndRequesterId(Long inviteId, Long requesterId);
-    List<AccessRequest> findByStatus(AccessRequest.RequestStatus status);
+    List<AccessRequest> findByDocument(Document document);
+    List<AccessRequest> findByRequester(User requester);
+    Optional<AccessRequest> findByDocumentAndRequester(Document document, User requester);
+    List<AccessRequest> findByDocumentAndStatus(Document doc, AccessRequestStatus status);
+    List<AccessRequest> findByRequesterAndStatus(User requester, AccessRequestStatus status);
 }
